@@ -3,9 +3,9 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace ConSge;
+namespace CgeGames;
 
-public abstract class ConSge
+public abstract class Cge
 {
     #region P/Invoke
 
@@ -134,11 +134,11 @@ public abstract class ConSge
 
     const char DEFAULT_CHAR = '█';
 
-    protected string Title { get; set; }
-    protected short Width { get; private set; }
-    protected short Height { get; private set; }
-    protected short FontWidth { get; private set; }
-    protected short FontHeight { get; private set; }
+    public string Title { get; set; }
+    public short Width { get; private set; }
+    public short Height { get; private set; }
+    public short FontWidth { get; private set; }
+    public short FontHeight { get; private set; }
     
     protected short DefaultColor { get; set; } = 0x0000;
 
@@ -238,6 +238,8 @@ public abstract class ConSge
             var deltaTime = (float)diff.TotalSeconds;
             lastTime = DateTime.UtcNow;
             HandleKeys();
+            var fps = 1.0f / deltaTime;
+            Console.Title = $"{Title} - FPS: {fps:0.00}";
             if (!OnUpdate(deltaTime)) throw new Exception("OnUpdate failed.");
             Blit();
         }
@@ -252,7 +254,7 @@ public abstract class ConSge
     /// <param name="fontWidth">Font width (in pixels)</param>
     /// <param name="fontHeight">Font height (in pixels)</param>
     /// <exception cref="Exception">if OnCreate returns false, this exception is thrown</exception>
-    public ConSge(string title, short width, short height, short fontWidth, short fontHeight)
+    public Cge(string title, short width, short height, short fontWidth, short fontHeight)
     {
         Title = title;
         Width = width;
