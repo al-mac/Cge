@@ -16,6 +16,7 @@ public class RetroCar : Cge
     readonly int width = 0;
     readonly int height = 0;
     short[] _carSprite;
+    readonly Random _rand = new(DateTime.Now.Millisecond);
 
     public RetroCar() : base("RetroCar", 160, 100, 3, 3)
     {
@@ -52,17 +53,15 @@ public class RetroCar : Cge
             0b111001111001110
         };
 
-        _vecTrack.Add(new(0.0f, 10.0f)); // start, finish
-        _vecTrack.Add(new(0.0f, 200.0f));
-        _vecTrack.Add(new(1.0f, 200.0f));
-        _vecTrack.Add(new(0.0f, 400.0f));
-        _vecTrack.Add(new(-1.0f, 100.0f));
-        _vecTrack.Add(new(0.0f, 200.0f));
-        _vecTrack.Add(new(-1.0f, 200.0f));
-        _vecTrack.Add(new(1.0f, 200.0f));
-        _vecTrack.Add(new(0.0f, 200.0f));
-        _vecTrack.Add(new(0.2f, 500.0f));
-        _vecTrack.Add(new(0.0f, 200.0f));
+        _vecTrack.Add(new( 0.0f, 005.0f)); // start, finish
+        _vecTrack.Add(new( 0.0f, 100.0f));
+        
+        for (var i = 0; i < 98; i++)
+        {
+            var curvature = (i & 1) == 0 ? 0 : (_rand.NextSingle() * (_rand.NextSingle() >= 0.5 ? 1 : -1));
+            var distance = 80.0f + (_rand.NextSingle() * 120.0f);
+            _vecTrack.Add(new(curvature, distance));
+        }
 
         foreach (var t in _vecTrack)
             _trackDistance += t.Value;
@@ -90,9 +89,9 @@ public class RetroCar : Cge
         }
 
         if (Math.Abs(_playerCurvature - _trackCurvature) >= 0.8f)
-            _carSpeed *= 0.8f;
+            _carSpeed = 0;
 
-        if (_carSpeed > 1.0f) _carSpeed = 1.0f;
+        if (_carSpeed > 1.5f) _carSpeed = 1.0f;
         if (_carSpeed < 0.0f) _carSpeed = 0.0f;
 
         _carDistance += (70.0f * _carSpeed) * deltaTime;
@@ -128,38 +127,37 @@ public class RetroCar : Cge
                 DrawPixel(x, y, 0x06);
         }
 
-        for (var y = 0; y < (Height >> 1); y++)
+        for (var y = 0; y < (height >> 1); y++)
         {
             for (var x = 0; x < width; x++)
             {
-                float perspective = y / (Height / 2.0f);
+                float perspective = y / (height / 2.0f);
 
                 float middle = 0.5f + _curvature * (float)Math.Pow(1.0f - perspective, 3);
                 float road = 0.1f + perspective * 0.8f;
                 float clip = road * 0.15f;
                 road *= 0.5f;
 
+                var middleRoad = middle * width;
                 var leftGrass = (middle - road - clip) * width;
                 var leftClip = (middle - road) * width;
 
                 var rightGrass = (middle + road + clip) * width;
                 var rightClip = (middle + road) * width;
 
-                var row = (Height >> 1) + y;
+                var row = (height >> 1) + y;
                 var grassColor = Math.Sin(20.0f * Math.Pow(1.0f - perspective, 3) + _carDistance * 0.1f) > 0 ? (byte)0x02 : (byte)0x0A;
                 var clipColor = Math.Sin(80.0f * Math.Pow(1.0f - perspective, 2) + _carDistance) > 0 ? (byte)0x04 : (byte)0x0F;
                 var roadColor = (section - 1) == 0 ? (byte)0x0F : (byte)0x08;
+                var stripeColor = clipColor == 0x0F ? (byte)0x08 : (byte)0x0F;
 
-                if (x >= 0 && x < leftGrass)
-                    DrawPixel(x, row, grassColor);
-                if (x >= leftGrass && x < leftClip)
-                    DrawPixel(x, row, clipColor);
-                if (x >= leftClip && x < rightClip)
-                    DrawPixel(x, row, roadColor);
-                if (x >= rightClip && x < rightGrass)
-                    DrawPixel(x, row, clipColor);
-                if (x >= rightGrass && x < width)
-                    DrawPixel(x, row, grassColor);
+                if (x >= 0 && x < leftGrass)                   DrawPixel(x, row, grassColor);
+                if (x >= leftGrass && x < leftClip)            DrawPixel(x, row, clipColor);
+                if (x >= leftClip && x < middleRoad - 1)       DrawPixel(x, row, roadColor);
+                if (x >= middleRoad - 1 && x < middleRoad + 1) DrawPixel(x, row, stripeColor);
+                if (x >= middleRoad + 1 && x < rightClip)      DrawPixel(x, row, roadColor);
+                if (x >= rightClip && x < rightGrass)          DrawPixel(x, row, clipColor);
+                if (x >= rightGrass && x < width)              DrawPixel(x, row, grassColor);
 
                 // Draw car
                 _carPos = _playerCurvature - _trackCurvature;
@@ -170,7 +168,7 @@ public class RetroCar : Cge
                     for (var cx = 0; cx < 15; cx++)
                     {
                         if (((_carSprite[cy + sprOffset] >> cx) & 1) == 0) continue;
-                        DrawPixel(carPos + cx, 80 + cy, 0x0B);
+                        DrawPixel(carPos + cx, 80 + cy,  0x0C);
                     }
                 }
             }
