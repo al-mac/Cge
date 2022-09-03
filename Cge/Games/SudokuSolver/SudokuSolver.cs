@@ -1,9 +1,9 @@
 ﻿namespace CgeGames.Games.TestGame;
 
-public class TestGame : Cge
+public class SudokuSolver : Cge
 {
     float pos = 0;
-    public TestGame() : base("TestGame", 64, 32, 10, 10)
+    public SudokuSolver() : base("TestGame", 80, 40, 16, 16)
     {
     }
 
