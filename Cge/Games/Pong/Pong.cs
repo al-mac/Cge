@@ -4,8 +4,6 @@ namespace CgeGames.Games.Pong;
 
 public class Pong : Cge
 {
-    static Random _rand = new(DateTime.Now.Millisecond);
-
     #region Classes
     class Vec
     {
@@ -23,6 +21,7 @@ public class Pong : Cge
         public int H { get; set; }
         public int B => (int)Y + H;
         public int R => (int)X + W;
+        public float CY => Y + (H >> 1);
         public Rect(float x, float y, int w, int h) : base(x, y)
         {
             W = w;
@@ -46,11 +45,30 @@ public class Pong : Cge
     }
     #endregion
 
-    const float _paddleSpeed = 60.0f;
-    readonly int[] _scores = new int[2];
+    int MiddleY(int h) => (Height >> 1) - (h >> 1);
+    int MiddleX(int w) => (Width >> 1) - (w >> 1);
+    void DrawSprite(Sprite s)
+    {
+        for (int y = (int)s.Rect.Y; y < s.Rect.B; y++)
+            for (int x = (int)s.Rect.X; x < s.Rect.R; x++)
+                DrawPixel(x, y, s.Color);
+    }
+    void ResetBall(bool updateScore)
+    {
+        if (updateScore) _scores[_ball.Rect.X < 0 ? 1 : 0]++;
+        _ball.Color = 0x01;
+        _ball.Rect.X = MiddleX(3);
+        _ball.Rect.Y = MiddleY(3);
+        _ballSpeed.X = (_rand.Next(0, 10) + (40 * (_rand.Next(0, 2) == 1 ? -1 : 1)));
+        _ballSpeed.Y = (_rand.Next(0, 10) + (40 * (_rand.Next(0, 2) == 1 ? -1 : 1)));
+    }
 
-    Sprite _ball;
+    static readonly Random _rand = new(DateTime.Now.Millisecond);
     readonly Vec _ballSpeed = new(0, 0);
+    readonly int[] _scores = new int[2];
+    const float _paddleSpeed = 60.0f;
+    
+    Sprite _ball;
     Sprite _player;
     Sprite _cpu;
     Sprite _middle;
@@ -65,16 +83,6 @@ public class Pong : Cge
         _ball = new(0x01, new(MiddleX(3), MiddleY(3), 3, 3));
         ResetBall(false);
         return true;
-    }
-
-    void ResetBall(bool updateScore)
-    {
-        if (updateScore) _scores[_ball.Rect.X < 0 ? 1 : 0]++;
-        _ball.Color = 0x01;
-        _ball.Rect.X = MiddleX(3);
-        _ball.Rect.Y = MiddleY(3);
-        _ballSpeed.X = (_rand.Next(0, 10) + (40 * (_rand.Next(0, 2) == 1 ? -1 : 1)));
-        _ballSpeed.Y = (_rand.Next(0, 10) + (40 * (_rand.Next(0, 2) == 1 ? -1 : 1)));
     }
 
     protected override bool OnUpdate(float deltaTime)
@@ -100,16 +108,11 @@ public class Pong : Cge
         }
 
         // update cpu
-        if (_ballSpeed.X > 0 && _rand.Next(0, 10) >= 3)
-        {
-            var centerBallY = _ball.Rect.Y + (_ball.Rect.H >> 1);
-            var centerPaddleY = _cpu.Rect.Y + (_cpu.Rect.H >> 1);
-            if (centerBallY != centerPaddleY)
-                _cpu.Move(0, centerBallY < centerPaddleY
-                    ? _cpu.Rect.Y <= 0 ? -_cpu.Rect.Y : -_paddleSpeed * deltaTime
-                    : _cpu.Rect.B >= Height ? Height - _cpu.Rect.B : _paddleSpeed * deltaTime
-                );
-        }
+        if (_ballSpeed.X > 0 && _rand.Next(0, 10) >= 3 && _ball.Rect.CY != _cpu.Rect.CY)
+            _cpu.Move(0, _ball.Rect.CY < _cpu.Rect.CY
+                ? _cpu.Rect.Y <= 0 ? -_cpu.Rect.Y : -_paddleSpeed * deltaTime
+                : _cpu.Rect.B >= Height ? Height - _cpu.Rect.B : _paddleSpeed * deltaTime
+            );
 
         // draw
         ClearScreen();
@@ -120,15 +123,4 @@ public class Pong : Cge
         DrawSprite(_ball);
         return true;
     }
-
-    #region Helpers
-    int MiddleY(int h) => (Height >> 1) - (h >> 1);
-    int MiddleX(int w) => (Width >> 1) - (w >> 1);
-    void DrawSprite(Sprite s)
-    {
-        for (int y = (int)s.Rect.Y; y < s.Rect.B; y++)
-            for (int x = (int)s.Rect.X; x < s.Rect.R; x++)
-                DrawPixel(x, y, s.Color);
-    }
-    #endregion
 }

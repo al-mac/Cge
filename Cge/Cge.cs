@@ -116,7 +116,7 @@ public abstract class Cge
 
     bool Blit() =>
        WriteConsoleOutputW(_fileHandle, _charInfoBuffer,
-           new() { X = Width, Y = Height },
+           new() { X = _width, Y = _height },
            new() { X = 0, Y = 0 }, ref _rect);
 
     void HandleKeys()
@@ -135,8 +135,10 @@ public abstract class Cge
     const char DEFAULT_CHAR = '█';
 
     public string Title { get; set; }
-    public short Width { get; private set; }
-    public short Height { get; private set; }
+    readonly short _width;
+    public short Width { get => _width; }
+    readonly short _height;
+    public short Height { get => _height; }
     public short FontWidth { get; private set; }
     public short FontHeight { get; private set; }
     
@@ -186,7 +188,7 @@ public abstract class Cge
     /// <param name="c">char to write. optional, default = DEFAULT_CHAR</param>
     protected void DrawPixel(int x, int y, short color, char c = DEFAULT_CHAR)
     {
-        var i = y * Width + x;
+        var i = y * _width + x;
         if (i < 0 || i >= _charInfoBuffer.Length) return;
         _charInfoBuffer[i].Attributes = color;
         _charInfoBuffer[i].UnicodeChar = c;
@@ -199,12 +201,15 @@ public abstract class Cge
     /// <param name="y">Y position</param>
     /// <param name="color">pixel color</param>
     /// <param name="text">Text to write</param>
-    protected void DrawText(int x, int y, short color, string text)
+    /// <param name="alpha">If true, doesnt write any spaces</param>
+    protected void DrawText(int x, int y, short color, string text, bool alpha = false)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        for (var i = 0; i < text.Length; i++)
+        var len = text.Length;
+        for (var i = 0; i < len; i++)
         {
-            if (x + i >= Width) return;
+            if (x + i >= _width) return;
+            if (alpha && text[i] == ' ') continue;
             DrawPixel(x + i, y, color, text[i]);
         }
     }
@@ -257,19 +262,19 @@ public abstract class Cge
     public Cge(string title, short width, short height, short fontWidth, short fontHeight)
     {
         Title = title;
-        Width = width;
-        Height = height;
+        _width = width;
+        _height = height;
         FontWidth = fontWidth;
         FontHeight = fontHeight;
         _stdInputHandle = GetStdHandle(-10);
         _stdOutputHandle = GetStdHandle(-11);
 
-        _rect = new() { Left = 0, Top = 0, Right = Width, Bottom = Height };
+        _rect = new() { Left = 0, Top = 0, Right = _width, Bottom = _height };
 
         Console.Title = Title;
         Console.CursorVisible = false;
 
-        var coord = new Coord() { X = Width, Y = Height };
+        var coord = new Coord() { X = _width, Y = _height };
         SetConsoleScreenBufferSize(_stdOutputHandle, coord);
         SetConsoleActiveScreenBuffer(_stdOutputHandle);
 
@@ -283,14 +288,14 @@ public abstract class Cge
 
         GetConsoleScreenBufferInfo(_stdOutputHandle, out ConsoleScreenBufferInfo info);
 
-        if (Width > info.MaximumSize.X) throw new Exception($"Width > info.MaximumSize.X ({info.MaximumSize.X})");
-        if (Height > info.MaximumSize.Y) throw new Exception($"Height > info.MaximumSize.Y ({info.MaximumSize.Y})");
+        if (_width > info.MaximumSize.X) throw new Exception($"Width > info.MaximumSize.X ({info.MaximumSize.X})");
+        if (_height > info.MaximumSize.Y) throw new Exception($"Height > info.MaximumSize.Y ({info.MaximumSize.Y})");
 
-        var rect = new SmallRect { Top = 0, Left = 0, Right = (short)(Width - 1), Bottom = (short)(Height - 1) };
+        var rect = new SmallRect { Top = 0, Left = 0, Right = (short)(_width - 1), Bottom = (short)(_height - 1) };
         if (!SetConsoleWindowInfo(_stdOutputHandle, true, ref rect)) throw new Exception("Erro in SetConsoleWindowInfo");
 
         SetConsoleMode(_stdInputHandle, 0x0080);
-        _charInfoBuffer = new CharInfo[Width * Height];
+        _charInfoBuffer = new CharInfo[_width * _height];
         _fileHandle = CreateFile("CONOUT$", 0x40000000, 2, IntPtr.Zero, FileMode.Open, 0, IntPtr.Zero);
 
         if (!OnCreate()) throw new Exception("OnCreate failed.");
